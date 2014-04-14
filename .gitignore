@@ -1,0 +1,11 @@
+#some file what need to track
+
+#ignore file what suffix is .a or .o
+*.[oa]
+
+#ignore file begin with ~
+*~
+
+#ignore floder torrent
+torrent
+

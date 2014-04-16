@@ -2,10 +2,11 @@ CC = gcc -g -Wall
 CFLAGS = -I inc/ -lpthread
 SRC = src/*.c
 
-all:
+laminar:main.o rtorret.o
+	$(CC) $(CFLAGS) $(SRC) -o laminar
 
-main:
-	$(CC) $(CFLAGS) $(SRC) -o main
+main.o:
+	$(CC) $(CFLAGS) $(SRC) -o ./src/main.o
 
-rtorret:
-	$(CC) $(CFLAGS) $(SRC) -O rtorret
+rtorret.o:
+	$(CC) $(CFLAGS) $(SRC) -o ./src/rtorret.o

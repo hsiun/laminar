@@ -1,5 +1,5 @@
 CC = gcc -g -Wall
-CFLAGS = -I inc/ -lpthread
+CFLAGS = -I inc/ 
 SRC = src/*.c
 
 laminar:main.o rtorret.o

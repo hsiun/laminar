@@ -7,6 +7,7 @@
 #include "rtorrent.h"
 #include "sha1.h"
 
+
 char *torrent_content = NULL;
 long torrent_length = -1;
 
@@ -28,12 +29,13 @@ annlist *annlist_head = NULL;
 int readtorr(char *torrent){
     long i;
     FILE *fp = fopen(torrent,"rb");
-    if (fp = NULL){
+    if (fp == NULL){
         printf("%s:%d can not open file...\n",__FILE__,__LINE__);
         return -1;
     }
     
     fseek(fp, 0, SEEK_END);
+
     torrent_length = ftell(fp);
 
     if (torrent_length == -1){

@@ -156,6 +156,7 @@ int getann(){
     return 0;
 }
 
+/*获取重定向的url*/
 int addann(char *url){
     annlist *p,*q;
     p = annlist_head;
@@ -203,7 +204,117 @@ int ismulti(){
     return 0;
 }
 
+/*获取piece的长度*/
+int getpilen(){
+    long i;
 
+    if (findkey("12:piece length",&i) == 1){
+        i = i + strlen("12:piece length");
+        i++;
+        while(torrent_content[i] != 'e'){
+            piece_length = piece_length * 10 + (torrent_content[i] - '0');
+            i++;
+        }
+    }else{
+        return -1;
+    }
+
+#ifdef DEBUG
+    printf("piece length:%d\n",piece_length);
+#endif
+    return 0;
+}
+
+/*获取piece的hash直*/
+int getpihash(){
+    long i;
+
+    if (findkey("6:pieces", &i) == 1){
+        i = i + strlen("6:pieces");
+        while(torrent_content[i] != ':'){
+            pieces_length = pieces_length * 10 + (torrent_content[i] - '0');
+            i++;
+        }
+        i++;
+        pieces_hash = (char *)malloc(pieces_length + 1);
+        memcpy(pieces_hash,&torrent_content[i],pieces_length);
+        pieces_hash[pieces_length] = '\0';
+    }
+    else {
+        return -1;
+    }
+
+#ifdef DEBUG
+    printf("get pieces hash ok\n");
+#endif
+    return 0;
+}
+
+
+/*获取文件的名字*/
+int getfname(){
+    long i;
+    int count = 0;
+
+    if (findkey("4:name", &i) == 1){
+        i = i + strlen("4:name");
+        while(torrent_content[i] != ':'){
+            count = count * 10 + (torrent_content[i] - '0');
+            i++;
+        }
+        i++;
+
+        files = (char *)malloc(count+1);
+        memcpy(files,&torrent_content[i],count);
+        files[count] = '\0';
+    }else{
+        return -1;
+    }
+
+#ifdef DEBUG
+    printf("files name:%s\n",files);
+#endif
+
+    return 0;
+}
+
+/*获取文件的长度*/
+int getflen(){
+    long i;
+    file *p;
+
+    if (ismulti() == 1){
+        if (file_head == NULL){
+           getflap(); 
+        }
+        p = file_head;
+        while (p != NULL){
+            file_size += p->len;
+            p = p -> next;
+        }
+    }else {
+        if (findkey("6:length",&i) == i) {
+            i = i + strlen("6:length");
+            i++;                        //跳过i
+            while(torrent_content[i] != 'e'){
+                file_size = file_size * 10 + torrent_content[i] - '0';
+                i++;
+            }
+        }
+    }
+
+#ifdef DEBUG
+    printf("file length:%lld\n",file_size);
+#endif
+
+    return 0;
+}
+
+/*对于多文件，获取文件的长度和名字*/
+int getflap(){
+
+    return 0;
+}
 
 int rtorrent(char *torrent){
     int ret;
@@ -221,6 +332,24 @@ int rtorrent(char *torrent){
     }
 
     ret = ismulti();
+    if (ret < 0) {
+        printf("%s:%d wrong:",__FILE__,__LINE__);
+        return -1;
+    }
+
+    ret = getpilen();
+    if (ret < 0) {
+        printf("%s:%d wrong:",__FILE__,__LINE__);
+        return -1;
+    }
+
+    ret = getpihash();
+    if (ret < 0) {
+        printf("%s:%d wrong:",__FILE__,__LINE__);
+        return -1;
+    }
+
+    ret = getfname();
     if (ret < 0) {
         printf("%s:%d wrong:",__FILE__,__LINE__);
         return -1;

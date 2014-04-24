@@ -23,7 +23,7 @@ long long file_size = 0;
 file *file_head = NULL;
 
 unsigned char info_hash[20];
-unsigned char perr_id[20];
+unsigned char peer_id[20];
 
 annlist *annlist_head = NULL;
 
@@ -312,8 +312,165 @@ int getflen(){
 
 /*对于多文件，获取文件的长度和名字*/
 int getflap(){
+    long i;
+    int count,length;
+    file *node = NULL,*p = NULL;
+
+    if (ismulti() != 1){
+        return 0;
+    }
+
+    for (i=0; i<torrent_length - 8; i++){
+        if (memcmp(&torrent_content[i],"6:length",8) == 0){
+            i = i + 8;
+            i++;
+            length = 0;
+            while (torrent_content[i] != 'e'){
+                length = length * 10 + (torrent_content[i] - '0');
+                i++;
+            }
+
+            node = (file *)malloc(sizeof(file));
+            node -> len = length;
+            node -> next = NULL;
+            if (file_head == NULL){
+                file_head = node;
+            }else{
+                p = file_head;
+                while (p->next != NULL){
+                    p = p->next;
+                }
+                p->next = node;
+            }
+        }
+        if (memcmp(&torrent_content[i],"4:path",6) == 0){
+            i = i + 6;
+            i++;
+            count = 0;
+            while (torrent_content[i] != ':'){
+                count = count * 10 + (torrent_content[i] - '0');
+                i++;
+            }
+            i++;
+            p = file_head;
+            while (p->next != NULL){
+                p = p->next;
+            }
+
+            memcpy(p->path,&torrent_content[i],count);
+            *(p->path + count) = '\0';
+        }
+    }
 
     return 0;
+}
+
+int getinhash(){
+    int count = 0;
+    int number;
+    long i,begin,end;
+
+    if(torrent_content == NULL)
+        return -1;
+
+    if (findkey("4:info",&i) == 1)
+        begin = i + 6;
+    else
+        return -1;
+
+    i = i + 6;
+    
+    for (; i < torrent_length; )
+        if (torrent_content[i] == 'd'){
+            count++;
+            i++;
+        }else if (torrent_content[i] == 'l'){
+            count++;
+            i++;
+        }else if (torrent_content[i] == 'i'){
+            i++;
+            if (i==torrent_length)
+                return -1;
+            while (torrent_content[i] != 'e'){
+                if ( (i+1) == torrent_length)
+                    return -1;
+                else
+                    i++;
+            }
+            i++;
+        }else if((torrent_content[i] >= '0') && (torrent_content[i] <= '9')){
+            number = 0;
+            while((torrent_content[i] >= '0') && (torrent_content[i] <= '9')){
+                number = number * 10 + torrent_content[i] - '0';
+                i++;
+            }
+            i++;
+            
+            i = i + number;
+
+        }else if(torrent_content[i] == 'e'){
+            count--;
+            if(count == 0){
+                end = i;
+                break;
+            }else{
+                i++;
+            }
+        }else{
+            return -1;
+        }
+
+    if (i == torrent_length)
+        return -1;
+
+    SHA1_CTX context;
+    SHA1Init(&context);
+    SHA1Update(&context, &torrent_content[begin], end-begin+1);
+    SHA1Final(info_hash, &context);
+
+#ifdef DEBUG
+    printf("info hash:");
+    for (i = 0; i < 20; i++)
+        printf("%.2x ",info_hash[i]);
+    printf("\n");
+#endif
+    return 0;
+        
+}
+
+
+int getpeid(){
+    srand(time(NULL));
+    sprintf(peer_id,"-TT1000-%12d",rand());
+
+#ifdef DEBUG
+    printf("peer_id:%s\n",peer_id);
+#endif
+    return 0;
+}
+
+void freemtor(){
+    annlist *p;
+    file *q;
+
+    if (torrent_content != NULL)
+        free(torrent_content);
+    if (files != NULL)
+        free(files);
+    if (pieces_hash != NULL)
+        free(pieces_hash);
+
+    while (annlist_head != NULL){
+        p = annlist_head;
+        annlist_head = annlist_head->next;
+        free(p);
+    }
+
+    while (file_head != NULL){
+        q = file_head;
+        file_head = file_head->next;
+        free(q);
+    }
 }
 
 int rtorrent(char *torrent){
@@ -354,6 +511,32 @@ int rtorrent(char *torrent){
         printf("%s:%d wrong:",__FILE__,__LINE__);
         return -1;
     }
+
+    ret = getflap();
+    if (ret < 0){
+        printf("%s:%d wrong:",__FILE__,__LINE__);
+        return -1;
+    }
+
+    ret = getflen();
+    if (ret < 0){
+        printf("%s:%d wrong:",__FILE__,__LINE__);
+        return -1;
+    }
+
+    ret = getinhash();
+    if (ret < 0){
+        printf("%s:%d wrong:",__FILE__,__LINE__);
+        return -1;
+    }
+
+    ret = getpeid();
+    if (ret < 0){
+        printf("%s:%d wrong:",__FILE__,__LINE__);
+        return -1;
+    }
+
+
 
     return 0;
 }
